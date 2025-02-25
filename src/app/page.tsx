@@ -8,6 +8,9 @@ export default function Home() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedTonerId, setSelectedTonerId] = useState(null);
   const [isExiting, setIsExiting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState(""); // "success", "error", etc.
+  const [isToastVisible, setIsToastVisible] = useState(false);
 
   const [formData, setFormData] = useState({
     nomToner: "",
@@ -15,6 +18,16 @@ export default function Home() {
     nomDemandeur: "",
     compteur: "",
   });
+
+  const handleSuccess = (msg) => {
+    setMessage(msg);
+    setMessageType("success");
+  };
+
+  const handleError = (msg) => {
+    setMessage(msg);
+    setMessageType("error");
+  };
 
   // Fonction pour ouvrir la modale
   const openModal = (tonerId) => {
@@ -89,11 +102,11 @@ export default function Home() {
       console.log("Statut:", response.status, "Réponse:", responseText); // Debug
   
       if (!response.ok) throw new Error(`Erreur ${response.status}: ${responseText}`);
-  
+      handleSuccess("Toner ajouté avec succès !");
       refreshList();
       closeModal();
     } catch (error) {
-      console.error("Erreur lors de l'enregistrement:", error.message);
+      handleError("Erreur lors de l'ajout du toner.");
     }
   };
   
@@ -112,8 +125,12 @@ export default function Home() {
   };
 
   useEffect(() => {
+    if (message) {
+      setIsToastVisible(true);
+      setTimeout(() => setIsToastVisible(false), 3000); // Masquer le toast après 3 secondes
+    }
     refreshList();
-  }, []);
+  }, [message]);
 
   // Supprimer un toner
   const handleDelete = async (id) => {
@@ -126,18 +143,29 @@ export default function Home() {
 
       if (response.ok) {
         setToners((prevToners) => prevToners.filter((toner) => toner._id !== id));
+        handleSuccess("Toner supprimé avec succès !");
       } else {
-        console.error("Erreur lors de la suppression.");
+        handleError("Erreur lors de la suppression.");
       }
     } catch (error) {
-      console.error("Erreur de connexion au serveur:", error);
+      handleError("Erreur de connexion au serveur.");
     }
   };
 
   return (
     <div className="container mx-auto p-8">
       <h1 className="text-2xl font-bold mb-4 text-center">Gestion des Toners</h1>
-
+       {/* Toast */}
+       {isToastVisible && (
+        <div
+          className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg transition-all duration-500 ${
+            messageType === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white`}
+          role="alert"
+        >
+          <span>{message}</span>
+        </div>
+      )}
       <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={() => openModal()}>
         Ajouter un Toner
       </button>
