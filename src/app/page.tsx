@@ -7,6 +7,7 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedTonerId, setSelectedTonerId] = useState(null);
+  const [isExiting, setIsExiting] = useState(false);
 
   const [formData, setFormData] = useState({
     nomToner: "",
@@ -52,7 +53,11 @@ export default function Home() {
 
   // Fonction pour fermer la modale
   const closeModal = () => {
-    setIsModalOpen(false);
+    setIsExiting(true); // Commence l'animation de fermeture
+    setTimeout(() => {
+      setIsModalOpen(false); // Cache la modale après l'animation
+      setIsExiting(false); // Réinitialise l'état d'animation de sortie
+    }, 500); // Durée de l'animation (500ms)
   };
 
   // Gestion des inputs
@@ -139,8 +144,11 @@ export default function Home() {
 
       {/* Modale */}
       {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal">
+        <div className="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className={`bg-white p-8 rounded-lg shadow-lg w-96 transform ${
+              isExiting ? 'opacity-0' : 'opacity-100'
+            } transition-opacity duration-500`}
+            style={{ animation: !isExiting && 'fadeIn 0.5s ease-out' }}>
             <h2>{isEditMode ? "Modifier un toner" : "Ajouter un toner"}</h2>
             <form onSubmit={handleSubmit}>
               <label>
@@ -272,6 +280,19 @@ export default function Home() {
   button:hover {
     background-color: #0056b3;
   }
+    @keyframes fadeIn {
+          0% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.5s ease-out;
+        }
 `}</style>
 
     </div>
