@@ -1,101 +1,279 @@
-import Image from "next/image";
+"use client"; // Indique que ce composant s'exécute côté client
+
+import { useEffect, useState } from "react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [toners, setToners] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedTonerId, setSelectedTonerId] = useState(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const [formData, setFormData] = useState({
+    nomToner: "",
+    bureau: "",
+    nomDemandeur: "",
+    compteur: "",
+  });
+
+  // Fonction pour ouvrir la modale
+  const openModal = (tonerId) => {
+    console.log("voiciiiiiiiiiiii: ",tonerId);
+    if (tonerId) {
+      setIsEditMode(true);
+      setSelectedTonerId(tonerId);
+      setIsModalOpen(true);
+      const tonerSelec = fetchTonerData(tonerId); // Assurez-vous que cette fonction est bien appelée
+      console.log("voiciiiiiiiiiiii: ",tonerSelec);
+    } else {
+      setIsEditMode(false);
+      setFormData({
+        nomToner: '',
+        bureau: '',
+        nomDemandeur: '',
+        compteur: '',
+      });
+      setIsModalOpen(true);
+    }
+  };
+  
+
+  // Fonction pour récupérer les données d'un toner spécifique
+  const fetchTonerData = async (tonerId) => {
+    console.log("voiciiiiiiiiiiiidans fetch: ",tonerId);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/toners/${tonerId}`);
+      if (!response.ok) throw new Error("Erreur lors de la récupération des données");
+      const toner = await response.json();
+      setFormData(toner);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Fonction pour fermer la modale
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  // Gestion des inputs
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  // Fonction pour soumettre le formulaire
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const method = isEditMode ? "PUT" : "POST";
+    const url = isEditMode
+      ? `${process.env.NEXT_PUBLIC_API_URL}/toners/${selectedTonerId}`
+      : `${process.env.NEXT_PUBLIC_API_URL}/toners`;
+  
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+  
+      const responseText = await response.text(); // Lire la réponse brute
+  
+      console.log("Statut:", response.status, "Réponse:", responseText); // Debug
+  
+      if (!response.ok) throw new Error(`Erreur ${response.status}: ${responseText}`);
+  
+      refreshList();
+      closeModal();
+    } catch (error) {
+      console.error("Erreur lors de l'enregistrement:", error.message);
+    }
+  };
+  
+
+
+  // Rafraîchir la liste des toners
+  const refreshList = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/toners`);
+      if (!response.ok) throw new Error("Erreur lors du chargement des toners");
+      const data = await response.json();
+      setToners(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    refreshList();
+  }, []);
+
+  // Supprimer un toner
+  const handleDelete = async (id) => {
+    if (!window.confirm("Voulez-vous vraiment supprimer ce toner ?")) return;
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/toners/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setToners((prevToners) => prevToners.filter((toner) => toner._id !== id));
+      } else {
+        console.error("Erreur lors de la suppression.");
+      }
+    } catch (error) {
+      console.error("Erreur de connexion au serveur:", error);
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-8">
+      <h1 className="text-2xl font-bold mb-4 text-center">Gestion des Toners</h1>
+
+      <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={() => openModal()}>
+        Ajouter un Toner
+      </button>
+
+      {/* Modale */}
+      {isModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>{isEditMode ? "Modifier un toner" : "Ajouter un toner"}</h2>
+            <form onSubmit={handleSubmit}>
+              <label>
+                Nom du toner:
+                <input
+                  type="text"
+                  name="nomToner"
+                  value={formData.nomToner}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <label>
+                Bureau:
+                <input
+                  type="text"
+                  name="bureau"
+                  value={formData.bureau}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <label>
+                Nom du demandeur:
+                <input
+                  type="text"
+                  name="nomDemandeur"
+                  value={formData.nomDemandeur}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <label>
+                Compteur:
+                <input
+                  type="number"
+                  name="compteur"
+                  value={formData.compteur}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <button type="submit">Soumettre</button>
+              <button type="button" onClick={closeModal}>
+                Fermer
+              </button>
+            </form>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
+
+      {/* Tableau des toners */}
+      <div className="overflow-x-auto mt-4">
+        <table className="w-full border border-gray-300 shadow-lg rounded-lg">
+          <thead>
+            <tr className="bg-gray-200 text-gray-700">
+              <th className="px-4 py-2 border">Nom du Toner</th>
+              <th className="px-4 py-2 border">Bureau</th>
+              <th className="px-4 py-2 border">Nom du Demandeur</th>
+              <th className="px-4 py-2 border">Compteur</th>
+              <th className="px-4 py-2 border">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {toners.map((toner) => (
+              <tr key={toner._id} className="text-center hover:bg-gray-100">
+                <td className="px-4 py-2 border">{toner.nomToner}</td>
+                <td className="px-4 py-2 border">{toner.bureau}</td>
+                <td className="px-4 py-2 border">{toner.nomDemandeur}</td>
+                <td className="px-4 py-2 border">{toner.compteur}</td>
+                <td className="border p-2">
+                  <button
+                    onClick={() => openModal(toner._id)}
+                    className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-700"
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    onClick={() => handleDelete(toner._id)}
+                    className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-700 ml-2"
+                  >
+                    Supprimer
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Styles */}
+      <style jsx>{`
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* S'assure qu'elle est au-dessus des autres éléments */
+  }
+  .modal {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 1001; /* Doit être supérieur à celui de l'overlay */
+  }
+  input {
+    margin: 10px 0;
+    padding: 8px;
+    width: 100%;
+  }
+  button {
+    margin-top: 10px;
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  button[type="button"] {
+    background-color: #ccc;
+  }
+  button:hover {
+    background-color: #0056b3;
+  }
+`}</style>
+
     </div>
   );
 }
