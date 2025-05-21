@@ -1,6 +1,7 @@
 "use client"; // Indique que ce composant s'exécute côté client
 
 import { useEffect, useState } from "react";
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const [toners, setToners] = useState([]);
@@ -11,6 +12,7 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState(""); // "success", "error", etc.
   const [isToastVisible, setIsToastVisible] = useState(false);
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     nomToner: "",
@@ -123,7 +125,9 @@ export default function Home() {
       console.error(error);
     }
   };
-
+useEffect(() => {
+    router.replace('/login');
+  }, [router]);
   useEffect(() => {
     if (message) {
       setIsToastVisible(true);
@@ -176,7 +180,9 @@ export default function Home() {
           <div className={`bg-white p-8 rounded-lg shadow-lg w-96 transform ${
               isExiting ? 'opacity-0' : 'opacity-100'
             } transition-opacity duration-500`}
-            style={{ animation: !isExiting && 'fadeIn 0.5s ease-out' }}>
+            style={{
+              animation: isExiting ? undefined : 'fadeIn 0.5s ease-out',
+            }}>
             <h2>{isEditMode ? "Modifier un toner" : "Ajouter un toner"}</h2>
             <form onSubmit={handleSubmit}>
               <label>
